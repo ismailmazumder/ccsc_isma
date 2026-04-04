@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCSC Profile Search</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f3f4f6;
+            color: #111827;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+        }
+        header {
+            background: #111827;
+            color: white;
+            padding: 1.25rem 1.5rem;
+        }
+        header h1 {
+            margin: 0 0 0.3rem;
+            font-size: 1.55rem;
+        }
+        header p {
+            margin: 0;
+            color: #d1d5db;
+            max-width: 780px;
+        }
+        .toolbar {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        .toolbar input {
+            flex: 1;
+            min-width: 220px;
+            padding: 0.85rem 1rem;
+            border: 1px solid #374151;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            background: #ffffff;
+            color: #111827;
+        }
+        .toolbar button {
+            padding: 0.85rem 1.2rem;
+            border: none;
+            border-radius: 0.75rem;
+            background: #2563eb;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .toolbar button:hover {
+            background: #1d4ed8;
+        }
+        .status {
+            margin-top: 0.75rem;
+            color: #f3f4f6;
+            font-size: 0.95rem;
+        }
+        .container {
+            padding: 1.5rem;
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+        .notice {
+            margin: 1rem 0;
+            padding: 1rem 1.1rem;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.9rem;
+            color: #334155;
+        }
+        #results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .card {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 12px 35px rgba(15, 23, 42, 0.08);
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+        }
+        .card-top {
+            display: grid;
+            grid-template-columns: 160px 1fr;
+            gap: 1rem;
+            padding: 1.2rem;
+        }
+        .photo {
+            width: 160px;
+            height: 200px;
+            background: #f8fafc;
+            display: grid;
+            place-items: center;
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+        .photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .photo span {
+            color: #64748b;
+            text-align: center;
+            padding: 0.7rem;
+            font-size: 0.9rem;
+        }
+        .info {
+            display: grid;
+            gap: 0.5rem;
+        }
+        .info h2 {
+            margin: 0;
+            font-size: 1.15rem;
+        }
+        .info small {
+            color: #6b7280;
+        }
+        .section {
+            padding: 1rem 1.2rem 1.2rem;
+            border-top: 1px solid #e5e7eb;
+            display: grid;
+            gap: 0.65rem;
+        }
+        .section-title {
+            margin: 0;
+            font-size: 0.95rem;
+            color: #111827;
+            letter-spacing: 0.01em;
+        }
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+        .field {
+            display: grid;
+            gap: 0.25rem;
+            font-size: 0.9rem;
+        }
+        .field label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #475569;
+        }
+        .field span {
+            color: #111827;
+            white-space: pre-wrap;
+        }
+        .empty-state {
+            padding: 2rem;
+            text-align: center;
+            background: #ffffff;
+            border-radius: 1rem;
+            border: 1px dashed #cbd5e1;
+            color: #475569;
+            font-size: 1rem;
+        }
+        @media (max-width: 640px) {
+            .card-top {
+                grid-template-columns: 1fr;
+            }
+            .field-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>CCSC Profile Search</h1>
+        <p>Search by name or ID and display the profile data plus the picture stored inside each ID folder.</p>
+    </header>
+    <div class="container">
+        <div class="toolbar">
+            <input id="searchInput" type="search" placeholder="Type a name or ID to search" autocomplete="off">
+            <button id="searchButton">Search</button>
+        </div>
+        <div id="status" class="status">Loading profile data…</div>
+        <div class="notice">This is a static GitHub Pages-friendly search interface. Make sure <code>all_profiles.json</code> and the <code>ccsc_love_pre_test</code> folder are published alongside this page.</div>
+        <div id="results"></div>
+    </div>
+    <script>
+        const jsonUrl = './all_profiles.json';
+        const imageBase = './ccsc_love_pre_test';
+        let profiles = [];
+
+        function normalize(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function buildProfileCard(profile) {
+            const data = profile['Basic Information'] || {};
+            const present = profile['Present Address'] || {};
+            const permanent = profile['Permanent Address'] || {};
+            const id = normalize(data['ID No']);
+            const imageSrc = `${imageBase}/${encodeURIComponent(id)}/pic.jpg`;
+
+            const card = document.createElement('article');
+            card.className = 'card';
+
+            const cardTop = document.createElement('div');
+            cardTop.className = 'card-top';
+
+            const photo = document.createElement('div');
+            photo.className = 'photo';
+            const img = document.createElement('img');
+            img.src = imageSrc;
+            img.alt = `Profile photo for ${data['Name'] || id}`;
+            img.onerror = () => {
+                img.remove();
+                const noPhoto = document.createElement('span');
+                noPhoto.textContent = 'No image available';
+                photo.appendChild(noPhoto);
+            };
+            photo.appendChild(img);
+
+            const info = document.createElement('div');
+            info.className = 'info';
+            const title = document.createElement('h2');
+            title.textContent = data['Name'] || 'Unknown name';
+            const subtitle = document.createElement('small');
+            subtitle.textContent = `ID: ${data['ID No'] || 'N/A'} · ${data['Type'] || ''}`;
+            info.appendChild(title);
+            info.appendChild(subtitle);
+
+            cardTop.appendChild(photo);
+            cardTop.appendChild(info);
+            card.appendChild(cardTop);
+
+            const addSection = (titleText, fields) => {
+                const section = document.createElement('section');
+                section.className = 'section';
+                const sectionTitle = document.createElement('h3');
+                sectionTitle.className = 'section-title';
+                sectionTitle.textContent = titleText;
+                section.appendChild(sectionTitle);
+
+                const fieldGrid = document.createElement('div');
+                fieldGrid.className = 'field-row';
+
+                Object.entries(fields).forEach(([label, value]) => {
+                    const field = document.createElement('div');
+                    field.className = 'field';
+                    const fieldLabel = document.createElement('label');
+                    fieldLabel.textContent = label;
+                    const fieldValue = document.createElement('span');
+                    fieldValue.textContent = value || '—';
+                    field.appendChild(fieldLabel);
+                    field.appendChild(fieldValue);
+                    fieldGrid.appendChild(field);
+                });
+
+                section.appendChild(fieldGrid);
+                card.appendChild(section);
+            };
+
+            addSection('Basic Information', {
+                'Name': data['Name'],
+                'Father’s Name': data['Father\'s Name'],
+                'Mother’s Name': data['Mother\'s Name'],
+                'Gender': data['Gender'],
+                'Religion': data['Religion'],
+                'Date of Birth': data['Date of Birth'],
+                'Academic Qualification': data['Academic Qualification'],
+                'Designation': data['Designation'],
+                'Subject': data['Subject'],
+                'Date of Joining': data['Date of Joining'],
+                'Blood Group': data['Blood Group'],
+            });
+
+            addSection('Present Address', {
+                'Village/Holding No': present['Village/Holding No'],
+                'Post': present['Post'],
+                'Word/ Union': present['Word/ Union'],
+                'Upazilla/ Thana': present['Upazilla/ Thana'],
+                'Zilla': present['Zilla'],
+            });
+
+            addSection('Permanent Address', {
+                'Village/Holding No': permanent['Village/Holding No'],
+                'Post': permanent['Post'],
+                'Word/ Union': permanent['Word/ Union'],
+                'Upazilla/ Thana': permanent['Upazilla/ Thana'],
+                'Zilla': permanent['Zilla'],
+            });
+
+            return card;
+        }
+
+        function renderResults(list) {
+            const results = document.getElementById('results');
+            const status = document.getElementById('status');
+            results.innerHTML = '';
+
+            if (!list.length) {
+                status.textContent = 'No matching profiles found.';
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = 'Try another name or ID. Search is case-insensitive and matches partial text.';
+                results.appendChild(empty);
+                return;
+            }
+
+            status.textContent = `${list.length} profile${list.length === 1 ? '' : 's'} found.`;
+            list.slice(0, 100).forEach(profile => {
+                results.appendChild(buildProfileCard(profile));
+            });
+            if (list.length > 100) {
+                const overflow = document.createElement('div');
+                overflow.className = 'empty-state';
+                overflow.textContent = `Showing first 100 of ${list.length} results. Narrow your search to see fewer profiles.`;
+                results.appendChild(overflow);
+            }
+        }
+
+        function runSearch() {
+            const term = normalize(document.getElementById('searchInput').value);
+            if (!term) {
+                document.getElementById('status').textContent = 'Enter a name or ID to search.';
+                document.getElementById('results').innerHTML = '<div class="empty-state">Type a name or ID above to find profiles.</div>';
+                return;
+            }
+            const filtered = profiles.filter(profile => {
+                const data = profile['Basic Information'] || {};
+                const allText = [data['ID No'], data['Name'], data['Type'], data['Designation'], data['Father\'s Name'], data['Mother\'s Name']]
+                    .map(normalize)
+                    .join(' ');
+                return allText.includes(term);
+            });
+            renderResults(filtered);
+        }
+
+        async function loadProfiles() {
+            const status = document.getElementById('status');
+            try {
+                const response = await fetch(jsonUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const json = await response.json();
+                profiles = Array.isArray(json.profiles) ? json.profiles : [];
+                status.textContent = `Loaded ${profiles.length} profiles. Search by name or ID.`;
+                document.getElementById('results').innerHTML = '<div class="empty-state">Type a name or ID above to find profiles.</div>';
+            } catch (error) {
+                status.textContent = 'Failed to load all_profiles.json. Make sure the file exists in the same directory and the site is served from GitHub Pages.';
+                document.getElementById('results').innerHTML = `<div class="empty-state">${error.message}</div>`;
+                console.error(error);
+            }
+        }
+
+        document.getElementById('searchButton').addEventListener('click', runSearch);
+        document.getElementById('searchInput').addEventListener('keydown', event => {
+            if (event.key === 'Enter') runSearch();
+        });
+
+        loadProfiles();
+    </script>
+</body>
+</html>
