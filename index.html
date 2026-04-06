@@ -203,7 +203,7 @@
             <button id="searchButton">Search</button>
         </div>
         <div id="status" class="status">Loading profile data…</div>
-        <div class="notice">This is a static GitHub Pages-friendly search interface. :) Make sure <code>all_profiles.json</code> and the <code>ccsc_love_pre_test</code> folder are published alongside this page.</div>
+        <div class="notice">This is a static GitHub Pages-friendly search interface. Make sure <code>all_profiles.json</code> and the <code>ccsc_love_pre_test</code> folder are published alongside this page.</div>
         <div id="results"></div>
     </div>
     <script>
@@ -220,7 +220,8 @@
             const present = profile['Present Address'] || {};
             const permanent = profile['Permanent Address'] || {};
             const id = normalize(data['ID No']);
-            const imageSrc = `${imageBase}/${encodeURIComponent(id)}/pic.jpg`;
+            const imageLink = data['Image Link'];
+            const imageSrc = imageLink ? imageLink : `${imageBase}/${encodeURIComponent(id)}/pic.jpg`;
 
             const card = document.createElement('article');
             card.className = 'card';
@@ -292,7 +293,7 @@
                 'Designation': data['Designation'],
                 'Subject': data['Subject'],
                 'Date of Joining': data['Date of Joining'],
-                'Blood Group': data['Blood Group'],
+                'Blood Group': data['Blood Group']
             });
 
             addSection('Present Address', {
